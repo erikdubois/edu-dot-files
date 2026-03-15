@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # URL of the file to download
-URL="https://raw.githubusercontent.com/erikdubois/arcolinux-nemesis/refs/heads/master/Personal/settings/sddm/kde_settings.conf"
+URL="https://raw.githubusercontent.com/erikdubois/arcolinux-nemesis/refs/heads/master/personal/settings/sddm/kde_settings.conf"
 
 # Target directory and filename
 TARGET_DIR="/etc/sddm.conf.d"
