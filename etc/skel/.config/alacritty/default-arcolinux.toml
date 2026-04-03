@@ -19,7 +19,7 @@ white = "#dcdccc"
 yellow = "#c4a000"
 
 [colors.primary]
-background = "#222222"
+background = "#111111"
 foreground = "#F9F9F9"
 
 [font]
@@ -50,3 +50,7 @@ history = 50000
 
 [window]
 opacity = 0.8
+
+[terminal.shell]
+program = "/usr/bin/fish"
+args = ["-l"]
