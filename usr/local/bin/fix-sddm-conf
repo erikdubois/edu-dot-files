@@ -1,33 +1,46 @@
 #!/bin/bash
 
-# URL of the file to download
-URL="https://raw.githubusercontent.com/erikdubois/arcolinux-nemesis/refs/heads/master/personal/settings/sddm/kde_settings.conf"
+configure_sddm_autologin() {
+    local target_dir="/etc/sddm.conf.d"
+    local target_file="${target_dir}/kde_settings.conf"
+    local tmp_file
+    local target_user="${SUDO_USER:-$USER}"
+    USER=${target_user}
 
-# Target directory and filename
-TARGET_DIR="/etc/sddm.conf.d"
-TARGET_FILE="$TARGET_DIR/kde_settings.conf"
 
-# Create the directory if it doesn't exist
-sudo mkdir -p "$TARGET_DIR"
+    sudo mkdir -p "${target_dir}"
 
-# Download the file to a temporary location
-TMP_FILE=$(mktemp)
-curl -fsSL "$URL" -o "$TMP_FILE"
+    tmp_file="$(mktemp)"
+    cat > "${tmp_file}" <<EOF
+[Autologin]
+Relogin=false
+Session=ohmychadwm
+User=${USER}
 
-# Check if download succeeded
-if [[ $? -ne 0 ]]; then
-  echo "Error: Failed to download file from $URL"
-  exit 1
-fi
+[General]
+HaltCommand=/usr/bin/systemctl poweroff
+RebootCommand=/usr/bin/systemctl reboot
 
-# Replace or insert the User field
-if grep -q "^User=" "$TMP_FILE"; then
-  sed -i "s/^User=.*/User=$USER/" "$TMP_FILE"
-else
-  echo -e "\nUser=$USER" >> "$TMP_FILE"
-fi
+[Theme]
+Current=arcolinux-simplicity
+CursorTheme=Bibata-Modern-Ice
+Font=Noto Sans,10,-1,0,50,0,0,0,0,0
 
-# Move the modified file to the target location
-sudo mv "$TMP_FILE" "$TARGET_FILE"
+[Users]
+MaximumUid=60513
+MinimumUid=1000
+EOF
 
-echo "SDDM configuration installed and set User=$USER at $TARGET_FILE"
+    sudo mv "${tmp_file}" "${target_file}"
+
+    echo "SDDM configuration changed and set User=${USER} at
+/etc/sddm.conf.d/kde_settings.conf to autologin.
+Check with 'nsddmk' in a terminal and change the variables when necessary"
+}
+
+configure_sddm_autologin
+
+echo
+echo "#############################################"
+echo "We changed the session to OHMYCHADWM"
+echo "#############################################"
