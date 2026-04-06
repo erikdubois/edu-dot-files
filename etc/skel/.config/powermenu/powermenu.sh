@@ -1,118 +1,126 @@
 #!/usr/bin/env bash
+## Power Menu — Rofi
+## Hardened rewrite: safer variable handling, guarded commands,
+## consistent $() syntax, defensive desktop logout.
 
-## Author : Aditya Shakya (adi1090x)
-## Github : @adi1090x
-#
-## Rofi   : Power Menu
-#
+# ── Config ────────────────────────────────────────────────────────────────────
+DIR="${HOME}/.config/powermenu"
+THEME="style-default"
 
-# host or hostname - comes from inetutils - install it with pacman
-# when missing
+# ── Runtime info ──────────────────────────────────────────────────────────────
+UPTIME="$(uptime -p | sed 's/up //')"
+HOST="$(hostname 2>/dev/null || echo "localhost")"
 
-# locking can be done with a variety of i3lock apps and more"
-# install and change to what you like
+# ── Menu labels ───────────────────────────────────────────────────────────────
+SHUTDOWN="⏻  Shutdown"
+REBOOT="  Reboot"
+LOCK="  Lock"
+SUSPEND="  Suspend"
+LOGOUT="  Logout"
+YES="  Yes"
+NO="  No"
 
-# Current Theme
-dir="$HOME/.config/powermenu/"
-theme='style-default'
-
-# CMDs
-uptime="`uptime -p | sed -e 's/up //g'`"
-host=`hostname`
-
-# Options
-shutdown='Shutdown'
-reboot='Reboot'
-lock='Lock'
-suspend='Suspend'
-logout='Logout'
-yes='Yes'
-no='No'
-
-# Rofi CMD
-rofi_cmd() {
-	rofi -dmenu \
-		-p "$host" \
-		-mesg "Uptime: $uptime" \
-		-theme ${dir}/${theme}.rasi
+# ── Rofi helpers ──────────────────────────────────────────────────────────────
+rofi_menu() {
+    rofi -dmenu \
+        -p "${HOST}" \
+        -mesg "Uptime: ${UPTIME}" \
+        -theme "${DIR}/${THEME}.rasi"
 }
 
-# Confirmation CMD
-confirm_cmd() {
-	rofi -theme-str 'window {location: center; anchor: center; fullscreen: false; width: 250px;}' \
-		-theme-str 'mainbox {children: [ "message", "listview" ];}' \
-		-theme-str 'listview {columns: 2; lines: 1;}' \
-		-theme-str 'element-text {horizontal-align: 0.5;}' \
-		-theme-str 'textbox {horizontal-align: 0.5;}' \
-		-dmenu \
-		-p 'Confirmation' \
-		-mesg 'Are you Sure?' \
-		-theme ${dir}/${theme}.rasi
+rofi_confirm() {
+    rofi \
+        -theme-str 'window    {location: center; anchor: center; fullscreen: false; width: 250px;}' \
+        -theme-str 'mainbox   {children: ["message","listview"];}' \
+        -theme-str 'listview  {columns: 2; lines: 1;}' \
+        -theme-str 'element-text {horizontal-align: 0.5;}' \
+        -theme-str 'textbox   {horizontal-align: 0.5;}' \
+        -dmenu \
+        -p "Confirm" \
+        -mesg "Are you sure?" \
+        -theme "${DIR}/${THEME}.rasi"
 }
 
-# Ask for confirmation
-confirm_exit() {
-	echo -e "$yes\n$no" | confirm_cmd
+# ── Ask for confirmation; returns 0 if user picked Yes ────────────────────────
+confirmed() {
+    local answer
+    answer="$(printf '%s\n%s' "${YES}" "${NO}" | rofi_confirm)"
+    [[ "${answer}" == "${YES}" ]]
 }
 
-# Pass variables to rofi dmenu
-run_rofi() {
-	echo -e "$logout\n$reboot\n$lock\n$suspend\n$shutdown" | rofi_cmd
+# ── Suspend helper: gracefully mute before sleeping ───────────────────────────
+pre_suspend() {
+    command -v mpc    &>/dev/null && mpc -q pause
+    command -v amixer &>/dev/null && amixer -q set Master mute
 }
 
-# Execute Command
-run_cmd() {
-	selected="$(confirm_exit)"
-	if [[ "$selected" == "$yes" ]]; then
-		if [[ $1 == '--shutdown' ]]; then
-			systemctl poweroff
-		elif [[ $1 == '--reboot' ]]; then
-			systemctl reboot
-		elif [[ $1 == '--suspend' ]]; then
-			mpc -q pause
-			amixer set Master mute
-			systemctl suspend
-		elif [[ $1 == '--logout' ]]; then
-			desktop=$(echo  $DESKTOP_SESSION)
-			echo "You are on "$desktop
-			case $desktop in
-				dk)
-					dkcmd exit
-					;;
-				hyprland)
-					hyprctl dispatch exit
-					;;
-				herbstluftwm)
-					herbstclient quit
-					;;
-				*)
-					pkill $desktop
-					#loginctl kill-user $USER
-					;;
-			esac
-		fi
-	else
-		exit 0
-	fi
+# ── Logout: detect the running desktop and exit cleanly ───────────────────────
+do_logout() {
+    local desktop="${DESKTOP_SESSION:-}"
+
+    # Fallback: try to detect common compositors / WMs if var is unset
+    if [[ -z "${desktop}" ]]; then
+        for wm in hyprland sway i3 openbox bspwm dk herbstluftwm; do
+            pgrep -x "${wm}" &>/dev/null && desktop="${wm}" && break
+        done
+    fi
+
+    case "${desktop}" in
+        dk)             dkcmd exit ;;
+        hyprland)       hyprctl dispatch exit ;;
+        herbstluftwm)   herbstclient quit ;;
+        sway)           swaymsg exit ;;
+        i3)             i3-msg exit ;;
+        "")
+            echo "ERROR: Could not detect desktop session." >&2
+            exit 1
+            ;;
+        *)
+            # Generic: kill the WM process by name
+            if ! pkill -x "${desktop}"; then
+                echo "ERROR: pkill '${desktop}' failed." >&2
+                exit 1
+            fi
+            ;;
+    esac
 }
 
-# Actions
-chosen="$(run_rofi)"
-case ${chosen} in
-    $shutdown)
-		run_cmd --shutdown
+# ── Lock screen ───────────────────────────────────────────────────────────────
+do_lock() {
+    if command -v betterlockscreen &>/dev/null; then
+        betterlockscreen -l dim -- --time-str="%H:%M"
+    elif command -v i3lock &>/dev/null; then
+        i3lock -c 000000
+    else
+        echo "ERROR: No lock screen found (betterlockscreen / i3lock)." >&2
+        exit 1
+    fi
+}
+
+# ── Main ──────────────────────────────────────────────────────────────────────
+chosen="$(printf '%s\n' "${LOGOUT}" "${REBOOT}" "${LOCK}" "${SUSPEND}" "${SHUTDOWN}" | rofi_menu)"
+
+case "${chosen}" in
+    "${SHUTDOWN}")
+        confirmed && systemctl poweroff
         ;;
-    $reboot)
-		run_cmd --reboot
+    "${REBOOT}")
+        confirmed && systemctl reboot
         ;;
-    $lock)
-		# sudo pacman -S i3lock-fancy-dualmonitors-git
-		i3lock-fancy-dualmonitor
+    "${LOCK}")
+        do_lock
         ;;
-    $suspend)
-		run_cmd --suspend
+    "${SUSPEND}")
+        if confirmed; then
+            pre_suspend
+            systemctl suspend
+        fi
         ;;
-    $logout)
-		run_cmd --logout
+    "${LOGOUT}")
+        confirmed && do_logout
+        ;;
+    *)
+        # User dismissed rofi or pressed Escape — exit silently
+        exit 0
         ;;
 esac
