@@ -1,26 +1,35 @@
-[colors.bright]
-black = "#545454"
-blue = "#94bff3"
-cyan = "#93e0e3"
-green = "#8ae234"
-magenta = "#b294bb"
-red = "#fc5454"
-white = "#ffffff"
-yellow = "#fce94f"
+[colors]
+[[colors.indexed_colors]]
+index = 16
+color = "0xff9e64"
 
-[colors.normal]
-black = "#3f3f3f"
-blue = "#94bff3"
-cyan = "#06989a"
-green = "#4e9a06"
-magenta = "#85678f"
-red = "#cc0000"
-white = "#dcdccc"
-yellow = "#c4a000"
+[[colors.indexed_colors]]
+index = 17
+color = "0xdb4b4b"
 
 [colors.primary]
-background = "#111111"
-foreground = "#F9F9F9"
+background = "0x1a1b26"
+foreground = "0xc0caf5"
+
+[colors.normal]
+black = "0x15161E"
+red = "0xf7768e"
+green = "0x9ece6a"
+yellow = "0xe0af68"
+blue = "0x7aa2f7"
+magenta = "0xbb9af7"
+cyan = "0x7dcfff"
+white = "0xa9b1d6"
+
+[colors.bright]
+black = "0x414868"
+red = "0xf7768e"
+green = "0x9ece6a"
+yellow = "0xe0af68"
+blue = "0x7aa2f7"
+magenta = "0xbb9af7"
+cyan = "0x7dcfff"
+white = "0xc0caf5"
 
 ### do not edit above this line — managed by ohmychadwm-menu
 
@@ -54,5 +63,5 @@ history = 50000
 opacity = 0.8
 
 [terminal.shell]
-program = "/usr/bin/fish"
+program = "/bin/fish"
 args = ["-l"]
