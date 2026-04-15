@@ -1,0 +1,27 @@
+# I/O Scheduler Tuning Rules
+# Optimizes I/O performance for different device types
+# Imported from EndeavourOS standards
+
+# SSD: Tune BFQ scheduler for lower idle latency
+ACTION=="add|change", SUBSYSTEM=="block", \
+  KERNEL=="sd[a-z]*|mmcblk[0-9]*", ATTR{queue/rotational}=="0", \
+  ATTR{queue/iosched/slice_idle_us}="0"
+
+# NVMe: Reduce polling delay for responsiveness
+ACTION=="add|change", KERNEL=="nvme[0-9]*n[0-9]*", \
+  ATTR{queue/io_poll_delay}="0"
+
+# HDD: Tune BFQ for rotational drives
+ACTION=="add|change", SUBSYSTEM=="block", \
+  KERNEL=="sd[a-z]*", ATTR{queue/rotational}=="1", \
+  ATTR{queue/iosched/fifo_batch}="32"
+
+# Enable adaptive read-ahead for SSDs
+ACTION=="add|change", SUBSYSTEM=="block", \
+  KERNEL=="sd[a-z]*|nvme[0-9]*n[0-9]*|mmcblk[0-9]*", \
+  ATTR{queue/read_ahead_kb}="256"
+
+# Reduce rotational drive read-ahead to save power
+ACTION=="add|change", SUBSYSTEM=="block", \
+  KERNEL=="sd[a-z]*", ATTR{queue/rotational}=="1", \
+  ATTR{queue/read_ahead_kb}="128"
