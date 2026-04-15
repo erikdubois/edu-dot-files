@@ -1,0 +1,16 @@
+# ============================================================================
+# Advanced Sound Card Power Management
+# ============================================================================
+# Fine-tuned for audio quality + power efficiency
+
+# ALSA: prevent clicks/pops from power transitions
+ACTION=="add", SUBSYSTEM=="sound", DRIVER=="snd_hda_intel", \
+  ATTR{model}="auto", ATTR{power_save}="10"
+
+# Jack detection for headphones (auto-disable speakers)
+ACTION=="add", SUBSYSTEM=="sound", KERNEL=="card*", \
+  RUN+="/usr/bin/alsactl restore 2>/dev/null || true"
+
+# USB DAC: gentle power-saving
+ACTION=="add", SUBSYSTEM=="sound", SUBSYSTEMS=="usb", \
+  ATTR{power/autosuspend_delay_ms}="5000"

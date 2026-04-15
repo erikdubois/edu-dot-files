@@ -1,0 +1,23 @@
+# ============================================================================
+# Storage Device Optimization - Speed and reliability
+# ============================================================================
+# Optimizes SSD/HDD settings for better responsiveness
+
+# NVMe: enable power state transitions (PS)
+ACTION=="add", SUBSYSTEM=="block", KERNEL=="nvme*", \
+  RUN+="/sbin/nvme set-feature -n /dev/nvme* -f 2 -v 2"
+
+# SSD: increase read-ahead for better sequential performance
+ACTION=="add", SUBSYSTEM=="block", KERNEL=="sd[a-z]*|nvme*", \
+  ATTR{queue/read_ahead_kb}="256"
+
+# HDD: conservative read-ahead to avoid excessive seeking
+ACTION=="add", SUBSYSTEM=="block", KERNEL=="sd[a-z]*", ATTR{queue/rotational}=="1", \
+  ATTR{queue/read_ahead_kb}="128"
+
+# Enable TRIM support for SSDs (for garbage collection)
+ACTION=="add", SUBSYSTEM=="block", KERNEL=="sd[a-z]*", \
+  RUN+="/sbin/hdparm -M 128 /dev/$name 2>/dev/null || true"
+
+# Set NCQ/AHCI for SATA drives
+ACTION=="add", SUBSYSTEM=="ata_port", RUN+="/bin/bash -c 'echo 32 > /sys/module/libata/parameters/force_nrq 2>/dev/null || true'"

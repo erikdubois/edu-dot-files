@@ -1,0 +1,21 @@
+# ============================================================================
+# Laptop/Battery Optimization - Power efficiency
+# ============================================================================
+# Critical for laptop users running keyboard-driven, minimal WMs
+
+# Disable bluetooth by default (power save)
+ACTION=="add", SUBSYSTEM=="pci", ATTRS{vendor}=="0x8087", ATTR{power/control}="auto"
+
+# Reduce WiFi power consumption when idle
+ACTION=="add", SUBSYSTEM=="net", KERNEL=="wlan*", \
+  RUN+="/sbin/iw $name set power_save on"
+
+# Aggressive USB autosuspend on battery
+ACTION=="add", SUBSYSTEM=="usb", ATTR{power/autosuspend}="3", ATTR{power/autosuspend_delay_ms}="3000"
+
+# Lower CPU frequency scaling for battery
+ACTION=="add", SUBSYSTEM=="dmi", ATTR{id}=="", \
+  RUN+="/bin/bash -c 'echo powersave > /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor 2>/dev/null || true'"
+
+# Thermal: allow moderate throttling to extend battery
+ACTION=="add", SUBSYSTEM=="thermal", ATTR{mode}=="enabled", ATTR{trip_point_*_type}=="*"

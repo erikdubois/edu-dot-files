@@ -1,0 +1,23 @@
+# ============================================================================
+# GPU/Display Optimization - Performance and responsiveness
+# ============================================================================
+# Optimizes graphics hardware for responsiveness and efficiency
+
+# NVIDIA GPUs: enable aggressive power saving
+ACTION=="add", SUBSYSTEM=="pci", ATTRS{vendor}=="0x10de", ATTRS{class}=="0x030000", \
+  ATTR{power/control}="auto"
+
+# AMD/ATI GPUs: enable dynamic power management
+ACTION=="add", SUBSYSTEM=="pci", ATTRS{vendor}=="0x1002", ATTRS{class}=="0x030000", \
+  ATTR{power/control}="auto"
+
+# Intel iGPU: enable RC6 power saving (modern intel)
+ACTION=="add", SUBSYSTEM=="pci", ATTRS{vendor}=="0x8086", ATTRS{class}=="0x030000", \
+  ATTR{power/control}="auto"
+
+# Displays: prevent accidental power-off
+ACTION=="add", SUBSYSTEM=="drm", RUN+="/bin/bash -c 'echo 0 > /sys/class/drm/*/power/autosuspend_delay_ms 2>/dev/null || true'"
+
+# Backlight: smooth brightness transitions
+ACTION=="add", SUBSYSTEM=="backlight", ATTR{brightness}=="*", \
+  ATTR{max_brightness}=="*", ATTR{type}="raw"

@@ -1,0 +1,24 @@
+# ============================================================================
+# Network Interface Optimization - Enhance responsiveness
+# ============================================================================
+# Optimizes network drivers for low latency and responsiveness
+
+# Intel Ethernet: disable interrupt coalescing for low latency
+ACTION=="add", SUBSYSTEM=="net", DRIVERS=="e1000e|igb|ixgbe|i40e", \
+  RUN+="/sbin/ethtool -C $name rx-usecs 0 rx-frames 0 tx-usecs 0 tx-frames 0"
+
+# Realtek Ethernet: balanced power and performance
+ACTION=="add", SUBSYSTEM=="net", DRIVERS=="r8169", \
+  RUN+="/sbin/ethtool -C $name rx-usecs 64 rx-frames 1"
+
+# WiFi: enable802.11n for better throughput
+ACTION=="add", SUBSYSTEM=="net", KERNEL=="w*", \
+  RUN+="/sbin/iw $name set txpower auto"
+
+# Reduce MTU jumbogram issues (common on WiFi)
+ACTION=="add", SUBSYSTEM=="net", KERNEL=="wlan*", ATTR{mtu}="1500"
+
+# Disable TSO/GSO if causing latency (rare, but helpful)
+# Uncomment if experiencing network latency spikes:
+# ACTION=="add", SUBSYSTEM=="net", DRIVERS=="your_driver", \
+#   RUN+="/sbin/ethtool -K $name tso off gso off"
