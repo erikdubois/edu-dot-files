@@ -1,0 +1,68 @@
+#!/usr/bin/env sh
+# ============================================================================
+# PCI Latency Timer Optimization
+# ============================================================================
+# PCI latency timers control max data access time for devices
+# Lower values = lower latency, but may cause timeouts on slow devices
+#
+# This script:
+#   - Sets conservative default (20 cycles) for all devices
+#   - Zeros northbridge (chipset) for fastest access
+#   - Optimizes audio devices (80 cycles for minimum latency)
+#
+# Reduces audio crackling, gaming latency, and burst I/O latency
+# Run at boot via systemd service (see pci-latency.service)
+
+set -e
+
+if [ "$(id -u)" -ne 0 ]; then
+    echo "Error: This script must be run with root privileges." >&2
+    exit 1
+fi
+
+# Check if setpci is available
+if ! command -v setpci > /dev/null 2>&1; then
+    echo "Error: setpci not found. Install pciutils package." >&2
+    exit 1
+fi
+
+# ============================================================================
+# Main Latency Optimization
+# ============================================================================
+
+# Reset latency timer for all PCI devices to conservative 20 cycles
+# This is safe and recommended for most systems
+echo "Setting default PCI latency timer to 20us for all devices..."
+setpci -v -s '*:*' latency_timer=20 2>/dev/null || true
+
+# Optimize northbridge (chipset) for fastest access
+# Latency timer = 0 allows unlimited access time (chipset internal communication)
+echo "Optimizing northbridge latency..."
+setpci -v -s '0:0' latency_timer=0 2>/dev/null || true
+
+# ============================================================================
+# Audio Device Optimization
+# ============================================================================
+# Sound cards benefit from 80 cycle latency timer
+# This prevents audio dropouts and crackling during heavy I/O
+# Uses device class 04xx (Multimedia Audio device)
+
+echo "Optimizing audio devices to 80 cycle latency..."
+setpci -v -d "*:*:04xx" latency_timer=80 2>/dev/null || true
+
+# ============================================================================
+# Optional: Advanced Fine-Tuning
+# ============================================================================
+# Uncomment these for specific hardware optimization
+
+# Video/GPU devices - balance between latency and throughput
+# setpci -v -d "*:*:030x" latency_timer=64 2>/dev/null || true
+
+# Network devices - optimize for low latency
+# setpci -v -d "*:*:02xx" latency_timer=32 2>/dev/null || true
+
+# Storage devices - keep conservative to avoid timeout issues
+# setpci -v -d "*:*:01xx" latency_timer=20 2>/dev/null || true
+
+echo "PCI latency timer optimization complete."
+exit 0
