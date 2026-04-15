@@ -1,0 +1,5 @@
+# Mintstick - USB/ISO Image Writer
+# Deprioritize I/O during burning to keep UI responsive
+# Type: BG_CPUIO - Background CPU/IO work (low priority)
+# ionice: 3 - Idle I/O priority (only use disk when nothing else needs it)
+{ "name": "mintstick", "type": "BG_CPUIO", "ionice": 3 }
