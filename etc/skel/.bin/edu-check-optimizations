@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # ============================================================================
-# Kiro-ISO Optimization System Health Check
+# Arch-Based Linux Optimization System Health Check
 # ============================================================================
 # Comprehensive script to verify all performance optimizations are working
+# Compatible with: Kiro-ISO, EndeavourOS, ArcoLinux, and other Arch-based distros
 # Usage: edu-check-optimizations [--full] [--log]
 # 
 # This script checks:
@@ -564,7 +565,8 @@ main() {
 
 show_help() {
     cat << EOF
-Kiro-ISO Optimization System Health Check
+Arch-Based Optimization System Health Check
+Compatible with: Kiro-ISO, EndeavourOS, ArcoLinux, and other Arch-based distros
 
 Usage: edu-check-optimizations [OPTIONS]
 

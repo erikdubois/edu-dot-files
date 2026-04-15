@@ -1,4 +1,6 @@
-# Kiro-ISO Optimization - Quick Reference
+# Arch-Based Optimization - Quick Reference
+
+**Compatible with:** Kiro-ISO, EndeavourOS, ArcoLinux, and other Arch-based distributions
 
 ## ⚡ Top 5 Most Impactful New Optimizations
 

@@ -1,4 +1,6 @@
-# Kiro-ISO Optimization Implementation Summary
+# Arch-Based Optimization Implementation Summary
+
+**Compatible with:** Kiro-ISO, EndeavourOS, ArcoLinux, and other Arch-based distributions
 
 ## Overview
 Successfully implemented **10 missing optimizations** from CachyOS best practices. All additions are **production-ready, well-documented, and low-risk**.

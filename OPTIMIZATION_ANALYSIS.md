@@ -1,4 +1,6 @@
-# Kiro-ISO Optimization Review vs CachyOS
+# Arch-Based Optimization Review vs CachyOS
+
+**Compatible with:** Kiro-ISO, EndeavourOS, ArcoLinux, and other Arch-based distributions
 
 ## Summary
 Your optimization suite is **solid and well-documented**, covering most critical areas. However, comparison with CachyOS reveals some gaps and opportunities for enhancement.

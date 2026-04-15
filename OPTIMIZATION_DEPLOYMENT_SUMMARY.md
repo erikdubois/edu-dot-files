@@ -1,5 +1,7 @@
 # Optimization Additions - Complete Summary
 
+**Compatible with:** Kiro-ISO, EndeavourOS, ArcoLinux, and other Arch-based distributions
+
 ## What Was Done
 
 Fixed the environment file conflict and added **10 high-impact optimizations** comparable to CachyOS. All additions are documented, production-ready, and low-risk.

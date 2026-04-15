@@ -1,8 +1,10 @@
-# Kiro-ISO Optimization Check Script
+# Arch-Based Optimization Check Script
 
 ## Overview
 
-`edu-check-optimizations` is a comprehensive system health check script that verifies all Kiro-ISO performance optimizations are installed and working correctly.
+`edu-check-optimizations` is a comprehensive system health check script that verifies all performance optimizations are installed and working correctly.
+
+Compatible with: **Kiro-ISO, EndeavourOS, ArcoLinux**, and other Arch-based Linux distributions.
 
 ## Location
 
@@ -240,8 +242,9 @@ fi
 
 For more information about each optimization, see:
 - `OPTIMIZATION_ANALYSIS.md` - Detailed comparison with CachyOS
-- `OPTIMIZATION_IMPLEMENTATION.md` - Implementation guide
+- `OPTIMIZATION_IMPLEMENTATION.md` - Implementation guide  
 - `OPTIMIZATION_QUICK_REFERENCE.md` - Quick reference
+- `ENDEAVOUROS_COMPATIBILITY.md` - EndeavourOS specific notes
 - `/etc/sysctl.d/99-kiro-optimizations.conf` - Kernel parameters
 - `/etc/modprobe.d/` - Driver configurations
 
