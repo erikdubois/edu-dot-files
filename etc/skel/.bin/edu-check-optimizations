@@ -1,0 +1,605 @@
+#!/usr/bin/env bash
+# ============================================================================
+# Kiro-ISO Optimization System Health Check
+# ============================================================================
+# Comprehensive script to verify all performance optimizations are working
+# Usage: edu-check-optimizations [--full] [--log]
+# 
+# This script checks:
+# - ZRAM compressed swap
+# - TCP BBR + Fair Queue networking
+# - PCI latency optimization
+# - GPU driver configurations
+# - THP (Transparent Huge Page) tuning
+# - Ananicy-cpp process priority
+# - Systemd journal configuration
+# - I/O scheduler settings
+# - Sysctl kernel parameters
+# - Modprobe driver configurations
+
+# Don't exit on errors - we want to continue checking all items
+set +e
+
+# Color codes
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+RESET='\033[0m'
+
+# Symbols
+CHECK="✓"
+CROSS="✗"
+WARN="⚠"
+
+# Counters
+PASSED=0
+FAILED=0
+WARNINGS=0
+TOTAL=0
+
+# Options
+FULL_OUTPUT=0
+LOG_FILE=""
+TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+
+# ============================================================================
+# Helper Functions
+# ============================================================================
+
+print_header() {
+    echo -e "\n${BLUE}========================================${RESET}"
+    echo -e "${BLUE}$1${RESET}"
+    echo -e "${BLUE}========================================${RESET}\n"
+}
+
+print_success() {
+    echo -e "${GREEN}${CHECK}${RESET} $1"
+    ((PASSED++))
+}
+
+print_failure() {
+    echo -e "${RED}${CROSS}${RESET} $1"
+    ((FAILED++))
+}
+
+print_warning() {
+    echo -e "${YELLOW}${WARN}${RESET} $1"
+    ((WARNINGS++))
+}
+
+print_info() {
+    echo -e "${BLUE}ℹ${RESET} $1"
+}
+
+print_value() {
+    echo -e "  → $1"
+}
+
+check_command() {
+    if command -v "$1" &> /dev/null; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+check_file() {
+    if [ -f "$1" ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+get_sysctl() {
+    sysctl -n "$1" 2>/dev/null || echo "NOT_FOUND"
+}
+
+# ============================================================================
+# System Information
+# ============================================================================
+
+check_system_info() {
+    print_header "System Information"
+    
+    echo -e "Hostname: $(hostname)"
+    echo -e "Kernel: $(uname -r)"
+    echo -e "Uptime: $(uptime -p)"
+    echo -e "Total RAM: $(free -h | awk '/^Mem:/ {print $2}')"
+    
+    if grep -q "x86-64-v4" /proc/cpuinfo 2>/dev/null; then
+        echo -e "CPU: x86-64-v4 (Advanced optimization capable)"
+    elif grep -q "x86-64-v3" /proc/cpuinfo 2>/dev/null; then
+        echo -e "CPU: x86-64-v3 (Basic optimization)"
+    else
+        echo -e "CPU: x86-64 (Standard)"
+    fi
+    echo ""
+}
+
+# ============================================================================
+# Check ZRAM Configuration
+# ============================================================================
+
+check_zram() {
+    print_header "ZRAM Compressed Swap Status"
+    
+    ((TOTAL++))
+    if [ -e /sys/class/zram-control ]; then
+        print_success "ZRAM device class found"
+        
+        if swapon --show | grep -q zram; then
+            print_success "ZRAM swap is active"
+            
+            zram_size=$(cat /proc/swaps | grep zram | awk '{print $3}' | head -1)
+            print_value "ZRAM Size: $((zram_size / 1024))MB"
+            
+            compression=$(cat /sys/block/zram0/comp_algorithm 2>/dev/null | tr -d '[]')
+            print_value "Compression: $compression"
+        else
+            print_warning "ZRAM configured but not active"
+            print_value "Enable with: sudo swapon /dev/zram0"
+        fi
+    else
+        print_failure "ZRAM not available"
+        print_value "Check: zram-generator.conf exists"
+        print_value "Ensure: systemd >= 251"
+    fi
+    echo ""
+}
+
+# ============================================================================
+# Check Network Performance
+# ============================================================================
+
+check_network() {
+    print_header "Network Performance Optimization"
+    
+    # TCP Congestion Control
+    ((TOTAL++))
+    tcp_cc=$(get_sysctl "net.ipv4.tcp_congestion_control")
+    if [ "$tcp_cc" = "bbr" ]; then
+        print_success "TCP congestion control: BBR (enabled)"
+    else
+        print_failure "TCP congestion control: $tcp_cc (expected: bbr)"
+    fi
+    
+    # Fair Queue Scheduler
+    ((TOTAL++))
+    qdisc=$(get_sysctl "net.core.default_qdisc")
+    if [ "$qdisc" = "fq" ]; then
+        print_success "Default qdisc: Fair Queue (fq)"
+    else
+        print_warning "Default qdisc: $qdisc (not fq)"
+    fi
+    
+    # Network Buffer Settings
+    ((TOTAL++))
+    rmem_max=$(get_sysctl "net.core.rmem_max")
+    if [ "$rmem_max" -gt 100000000 ]; then
+        print_success "Network RX buffers: Optimized ($rmem_max bytes)"
+    else
+        print_warning "Network RX buffers: $rmem_max (may be low)"
+    fi
+    
+    echo ""
+}
+
+# ============================================================================
+# Check PCI Latency Optimization
+# ============================================================================
+
+check_pci_latency() {
+    print_header "PCI Latency Optimization"
+    
+    ((TOTAL++))
+    if systemctl -q is-active pci-latency.service 2>/dev/null; then
+        print_success "PCI latency service: Running"
+    elif systemctl -q is-enabled pci-latency.service 2>/dev/null; then
+        print_warning "PCI latency service: Enabled but not running"
+    else
+        print_failure "PCI latency service: Not installed/enabled"
+    fi
+    
+    # Check if pci-latency script exists
+    ((TOTAL++))
+    if [ -x /usr/local/bin/pci-latency ]; then
+        print_success "PCI latency script: Found and executable"
+    else
+        print_warning "PCI latency script: Not found at /usr/local/bin/pci-latency"
+    fi
+    
+    echo ""
+}
+
+# ============================================================================
+# Check GPU Optimization
+# ============================================================================
+
+check_gpu_optimization() {
+    print_header "GPU Driver Optimization"
+    
+    # NVIDIA
+    ((TOTAL++))
+    if lspci 2>/dev/null | grep -i nvidia > /dev/null; then
+        print_info "NVIDIA GPU detected"
+        if grep -q "NVreg_UsePageAttributeTable" /etc/modprobe.d/nvidia.conf 2>/dev/null; then
+            print_success "NVIDIA modprobe: PAT optimization found"
+        else
+            print_warning "NVIDIA modprobe: Not found or incomplete"
+        fi
+    else
+        print_info "No NVIDIA GPU detected (skipped)"
+    fi
+    
+    # AMD
+    ((TOTAL++))
+    if lspci 2>/dev/null | grep -iE "AMD.*Radeon|ATI" > /dev/null; then
+        print_info "AMD GPU detected"
+        if grep -q "ppfeaturemask" /etc/modprobe.d/amdgpu.conf 2>/dev/null; then
+            print_success "AMD modprobe: Feature mask found"
+        else
+            print_warning "AMD modprobe: Not found or incomplete"
+        fi
+    else
+        print_info "No AMD GPU detected (skipped)"
+    fi
+    
+    echo ""
+}
+
+# ============================================================================
+# Check THP Settings
+# ============================================================================
+
+check_thp() {
+    print_header "Transparent Huge Page (THP) Tuning"
+    
+    ((TOTAL++))
+    if [ -f /sys/kernel/mm/transparent_hugepage/defrag ]; then
+        thp_defrag=$(cat /sys/kernel/mm/transparent_hugepage/defrag | tr -d '[]')
+        if [[ "$thp_defrag" == *"defer+madvise"* ]] || [[ "$thp_defrag" == *"defer"* ]]; then
+            print_success "THP defragmentation: Optimized ($thp_defrag)"
+        else
+            print_warning "THP defragmentation: $thp_defrag"
+        fi
+    else
+        print_warning "THP not available on this system"
+    fi
+    
+    echo ""
+}
+
+# ============================================================================
+# Check Ananicy-cpp
+# ============================================================================
+
+check_ananicy() {
+    print_header "Ananicy-cpp Process Priority Daemon"
+    
+    ((TOTAL++))
+    if check_command ananicy-cpp; then
+        print_success "Ananicy-cpp: Installed"
+        
+        if systemctl -q is-active ananicy-cpp.service 2>/dev/null; then
+            print_success "Ananicy-cpp: Service running"
+            
+            rule_count=$(ananicy-cpp dump rules 2>&1 | grep -c '":' || echo "?")
+            print_value "Process rules loaded: ~$rule_count"
+        else
+            print_warning "Ananicy-cpp: Not running (enable with: systemctl enable --now ananicy-cpp)"
+        fi
+    else
+        print_failure "Ananicy-cpp: Not installed"
+    fi
+    
+    echo ""
+}
+
+# ============================================================================
+# Check Journal Configuration
+# ============================================================================
+
+check_journal() {
+    print_header "Systemd Journal Configuration"
+    
+    ((TOTAL++))
+    journal_size=$(journalctl --disk-usage 2>/dev/null | grep -oP '\d+(\.\d+)?[MG](?=\s+$)' || echo "unknown")
+    print_info "Journal disk usage: $journal_size"
+    
+    ((TOTAL++))
+    storage=$(grep "^Storage=" /etc/systemd/journald.conf.d/10-kiro-journal.conf 2>/dev/null | cut -d= -f2)
+    if [ "$storage" = "volatile" ]; then
+        print_success "Journal storage: Volatile (RAM only - optimized for live systems)"
+    else
+        print_info "Journal storage: $storage"
+    fi
+    
+    echo ""
+}
+
+# ============================================================================
+# Check I/O Schedulers
+# ============================================================================
+
+check_io_schedulers() {
+    print_header "I/O Scheduler Configuration"
+    
+    print_info "Current I/O schedulers:"
+    
+    for dev in /sys/block/sd*/queue/scheduler; do
+        devname=$(basename $(dirname $dev))
+        scheduler=$(cat $dev | tr -d '[]')
+        ((TOTAL++))
+        
+        if [[ "$scheduler" == *"bfq"* ]] || [[ "$scheduler" == *"mq-deadline"* ]] || [[ "$scheduler" == *"none"* ]]; then
+            print_success "$devname: $scheduler"
+        else
+            print_warning "$devname: $scheduler"
+        fi
+    done
+    
+    for dev in /sys/block/nvme*/queue/scheduler; do
+        [ -e "$dev" ] || continue
+        devname=$(basename $(dirname $dev))
+        scheduler=$(cat $dev | tr -d '[]')
+        ((TOTAL++))
+        
+        if [[ "$scheduler" == *"none"* ]] || [[ "$scheduler" == *"bfq"* ]]; then
+            print_success "$devname: $scheduler"
+        else
+            print_warning "$devname: $scheduler"
+        fi
+    done
+    
+    echo ""
+}
+
+# ============================================================================
+# Check Kernel Parameters
+# ============================================================================
+
+check_kernel_params() {
+    print_header "Kernel Parameters (Sysctl)"
+    
+    # Memory Management
+    print_info "Memory Management:"
+    ((TOTAL++))
+    swappiness=$(get_sysctl "vm.swappiness")
+    if [ "$swappiness" = "100" ]; then
+        print_success "VM swappiness: $swappiness (optimized for responsiveness)"
+    else
+        print_warning "VM swappiness: $swappiness (expected: 100)"
+    fi
+    
+    ((TOTAL++))
+    vfs_cache=$(get_sysctl "vm.vfs_cache_pressure")
+    if [ "$vfs_cache" -le "50" ]; then
+        print_success "VFS cache pressure: $vfs_cache (keep cache in memory)"
+    else
+        print_warning "VFS cache pressure: $vfs_cache"
+    fi
+    
+    # File Descriptors
+    print_info "\nFile Descriptor Limits:"
+    ((TOTAL++))
+    file_max=$(get_sysctl "fs.file-max")
+    if [ "$file_max" -gt 1000000 ]; then
+        print_success "Max file descriptors: $file_max"
+    else
+        print_warning "Max file descriptors: $file_max"
+    fi
+    
+    # Network
+    print_info "\nNetwork Parameters:"
+    ((TOTAL++))
+    netdev_backlog=$(get_sysctl "net.core.netdev_max_backlog")
+    if [ "$netdev_backlog" -ge 4096 ]; then
+        print_success "Network device backlog: $netdev_backlog"
+    else
+        print_warning "Network device backlog: $netdev_backlog"
+    fi
+    
+    # Security
+    print_info "\nSecurity Hardening:"
+    ((TOTAL++))
+    kptr=$(get_sysctl "kernel.kptr_restrict")
+    if [ "$kptr" = "2" ]; then
+        print_success "Kernel pointer restriction: $kptr (enabled)"
+    else
+        print_warning "Kernel pointer restriction: $kptr"
+    fi
+    
+    echo ""
+}
+
+# ============================================================================
+# Check Modprobe Configurations
+# ============================================================================
+
+check_modprobe() {
+    print_header "Modprobe Driver Configurations"
+    
+    print_info "Installed driver configurations:"
+    
+    configs=(
+        "/etc/modprobe.d/nvidia.conf:NVIDIA GPU"
+        "/etc/modprobe.d/amdgpu.conf:AMD GPU"
+        "/etc/modprobe.d/blacklist-watchdog.conf:Watchdog blacklist"
+        "/etc/modprobe.d/intel-ethernet.conf:Intel network"
+        "/etc/modprobe.d/realtek-ethernet.conf:Realtek network"
+        "/etc/modprobe.d/audio-hda.conf:Audio HDA"
+    )
+    
+    for config in "${configs[@]}"; do
+        ((TOTAL++))
+        file="${config%:*}"
+        name="${config#*:}"
+        
+        if [ -f "$file" ]; then
+            print_success "$name: Found"
+        else
+            print_warning "$name: Not installed ($file)"
+        fi
+    done
+    
+    echo ""
+}
+
+# ============================================================================
+# Performance Summary
+# ============================================================================
+
+print_summary() {
+    print_header "Optimization Check Summary"
+    
+    TOTAL=$((PASSED + FAILED + WARNINGS))
+    
+    echo -e "Total checks: $TOTAL"
+    echo -e "${GREEN}Passed:  $PASSED${RESET}"
+    echo -e "${YELLOW}Warnings: $WARNINGS${RESET}"
+    echo -e "${RED}Failed:   $FAILED${RESET}"
+    
+    if [ $FAILED -eq 0 ]; then
+        echo -e "\n${GREEN}✓ System is fully optimized!${RESET}"
+        return 0
+    elif [ $WARNINGS -eq 0 ]; then
+        echo -e "\n${YELLOW}⚠ Minor issues detected, review above${RESET}"
+        return 1
+    else
+        echo -e "\n${RED}✗ Critical issues detected, review above${RESET}"
+        return 2
+    fi
+}
+
+# ============================================================================
+# Remediation Guide
+# ============================================================================
+
+print_remediation() {
+    print_header "Remediation Guide"
+    
+    if [ $FAILED -gt 0 ] || [ $WARNINGS -gt 0 ]; then
+        echo "To fix issues, try these commands:"
+        echo ""
+        
+        if ! systemctl -q is-active pci-latency.service 2>/dev/null; then
+            echo "  Enable PCI latency service:"
+            echo "  sudo systemctl enable --now pci-latency.service"
+            echo ""
+        fi
+        
+        if ! systemctl -q is-active ananicy-cpp.service 2>/dev/null; then
+            echo "  Enable Ananicy-cpp:"
+            echo "  sudo systemctl enable --now ananicy-cpp.service"
+            echo ""
+        fi
+        
+        if ! swapon --show | grep -q zram; then
+            echo "  Enable ZRAM swap:"
+            echo "  sudo systemctl enable --now systemd-zram-setup@zram0.service"
+            echo ""
+        fi
+        
+        echo "  Reload all settings:"
+        echo "  sudo systemd-tmpfiles --create"
+        echo "  sudo sysctl -p /etc/sysctl.d/99-kiro-optimizations.conf"
+        echo ""
+    fi
+}
+
+# ============================================================================
+# Main Execution
+# ============================================================================
+
+main() {
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --full) FULL_OUTPUT=1 ;;
+            --log) LOG_FILE="/tmp/kiro-optimization-check-$TIMESTAMP.log" ;;
+            -h|--help) show_help; exit 0 ;;
+            *) echo "Unknown option: $1"; exit 1 ;;
+        esac
+        shift
+    done
+    
+    # Redirect to log if requested
+    if [ -n "$LOG_FILE" ]; then
+        exec > >(tee -a "$LOG_FILE")
+        exec 2>&1
+        echo "Log file: $LOG_FILE"
+    fi
+    
+    # Run checks
+    check_system_info
+    check_zram
+    check_network
+    check_pci_latency
+    check_gpu_optimization
+    check_thp
+    check_ananicy
+    check_journal
+    check_io_schedulers
+    check_kernel_params
+    check_modprobe
+    
+    # Print summary
+    print_summary
+    EXIT_CODE=$?
+    
+    # Remediation
+    if [ $EXIT_CODE -ne 0 ]; then
+        print_remediation
+    fi
+    
+    if [ -n "$LOG_FILE" ]; then
+        echo ""
+        echo "Log saved to: $LOG_FILE"
+    fi
+    
+    return $EXIT_CODE
+}
+
+show_help() {
+    cat << EOF
+Kiro-ISO Optimization System Health Check
+
+Usage: edu-check-optimizations [OPTIONS]
+
+Options:
+  --full    Show detailed output for all checks
+  --log     Save output to log file in /tmp/
+  -h, --help    Show this help message
+
+Examples:
+  edu-check-optimizations              # Quick check
+  edu-check-optimizations --full --log # Full output with logging
+
+The script checks:
+  • ZRAM compressed swap configuration
+  • TCP BBR + Fair Queue networking
+  • PCI latency optimization service
+  • GPU driver modprobe configurations
+  • THP (Transparent Huge Page) settings
+  • Ananicy-cpp process priority daemon
+  • Systemd journal configuration
+  • I/O scheduler assignments
+  • Kernel parameters (sysctl)
+  • Modprobe driver configurations
+
+Exit codes:
+  0 = All optimizations working correctly
+  1 = Some warnings detected
+  2 = Critical issues found
+
+EOF
+}
+
+# ============================================================================
+# Run Main
+# ============================================================================
+
+main "$@"
+exit $?

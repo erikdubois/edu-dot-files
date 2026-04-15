@@ -5,11 +5,13 @@ After=multi-user.target
 
 [Service]
 Type=oneshot
+User=root
 ExecStart=/usr/local/bin/pci-latency
 StandardOutput=journal
 StandardError=journal
+SyslogIdentifier=pci-latency
 
-# Continue boot even if script fails
+# Continue boot even if script fails (pci-latency changes are non-critical)
 RemainAfterExit=yes
 
 [Install]

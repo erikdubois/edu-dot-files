@@ -13,7 +13,8 @@
 # Reduces audio crackling, gaming latency, and burst I/O latency
 # Run at boot via systemd service (see pci-latency.service)
 
-set -e
+# Don't exit on errors - continue even if some commands fail
+set +e
 
 if [ "$(id -u)" -ne 0 ]; then
     echo "Error: This script must be run with root privileges." >&2
@@ -32,13 +33,12 @@ fi
 
 # Reset latency timer for all PCI devices to conservative 20 cycles
 # This is safe and recommended for most systems
-echo "Setting default PCI latency timer to 20us for all devices..."
-setpci -v -s '*:*' latency_timer=20 2>/dev/null || true
+# Suppress verbose output for cleaner systemd logs
+setpci -s '*:*' latency_timer=20 2>/dev/null || true
 
 # Optimize northbridge (chipset) for fastest access
 # Latency timer = 0 allows unlimited access time (chipset internal communication)
-echo "Optimizing northbridge latency..."
-setpci -v -s '0:0' latency_timer=0 2>/dev/null || true
+setpci -s '0:0' latency_timer=0 2>/dev/null || true
 
 # ============================================================================
 # Audio Device Optimization
@@ -46,23 +46,11 @@ setpci -v -s '0:0' latency_timer=0 2>/dev/null || true
 # Sound cards benefit from 80 cycle latency timer
 # This prevents audio dropouts and crackling during heavy I/O
 # Uses device class 04xx (Multimedia Audio device)
-
-echo "Optimizing audio devices to 80 cycle latency..."
-setpci -v -d "*:*:04xx" latency_timer=80 2>/dev/null || true
+setpci -s '*:*:04xx' latency_timer=80 2>/dev/null || true
 
 # ============================================================================
-# Optional: Advanced Fine-Tuning
+# Completion
 # ============================================================================
-# Uncomment these for specific hardware optimization
 
-# Video/GPU devices - balance between latency and throughput
-# setpci -v -d "*:*:030x" latency_timer=64 2>/dev/null || true
-
-# Network devices - optimize for low latency
-# setpci -v -d "*:*:02xx" latency_timer=32 2>/dev/null || true
-
-# Storage devices - keep conservative to avoid timeout issues
-# setpci -v -d "*:*:01xx" latency_timer=20 2>/dev/null || true
-
-echo "PCI latency timer optimization complete."
+# Exit successfully - we use 'set +e' to never fail
 exit 0
