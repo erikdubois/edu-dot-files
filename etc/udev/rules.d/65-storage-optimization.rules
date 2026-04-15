@@ -30,7 +30,7 @@ ACTION=="add", SUBSYSTEM=="block", KERNEL=="sd[a-z]*", ATTR{queue/rotational}=="
 # Helps maintain SSD performance over time
 # Works with ext4, btrfs, f2fs, ntfs
 ACTION=="add", SUBSYSTEM=="block", KERNEL=="sd[a-z]*", \
-  RUN+="/sbin/hdparm -M 128 /dev/$name 2>/dev/null || true"
+  RUN+="/usr/bin/hdparm -M 128 /dev/$name 2>/dev/null || true"
 
 # Set NCQ/AHCI for SATA drives (Native Command Queuing)
 # Allows drive to optimize command order for better throughput
