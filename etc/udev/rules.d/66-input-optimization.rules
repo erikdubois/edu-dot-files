@@ -19,6 +19,3 @@ ACTION=="add", SUBSYSTEM=="input", KERNEL=="mice", \
 ACTION=="add", SUBSYSTEM=="input", ATTRS{name}=="*Mouse*", \
   ENV{MOUSE_ACCEL}="0", ENV{MOUSE_SPEED}="1.0"
 
-# Game controllers: real-time input processing
-ACTION=="add", SUBSYSTEM=="input", ATTRS{name}=="*Gamepad*|*Joystick*|*Controller*", \
-  RUN+="/bin/bash -c 'chrt -p 50 $PPID 2>/dev/null || true'"

@@ -16,12 +16,4 @@ ACTION=="add|change", SUBSYSTEM=="block", \
   KERNEL=="sd[a-z]*", ATTR{queue/rotational}=="1", \
   ATTR{queue/iosched/fifo_batch}="32"
 
-# Enable adaptive read-ahead for SSDs
-ACTION=="add|change", SUBSYSTEM=="block", \
-  KERNEL=="sd[a-z]*|nvme[0-9]*n[0-9]*|mmcblk[0-9]*", \
-  ATTR{queue/read_ahead_kb}="256"
-
-# Reduce rotational drive read-ahead to save power
-ACTION=="add|change", SUBSYSTEM=="block", \
-  KERNEL=="sd[a-z]*", ATTR{queue/rotational}=="1", \
-  ATTR{queue/read_ahead_kb}="128"
+# Note: read_ahead_kb rules removed - attribute only exists on block devices, not partitions
