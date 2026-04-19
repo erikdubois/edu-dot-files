@@ -22,13 +22,6 @@
 # reset - commit your changes or stash them before you merge
 # git reset --hard - personal alias - grh
 
-if [[ -f "./repo.sh" ]]; then
-    echo "Found repo.sh, running it..."
-    bash ./repo.sh
-fi
-
-cp /home/erik/DATA/arcolinux-nemesis/mirrorlist /home/erik/DATA/EDU/edu-dot-files/usr/local/share/edu/
-
 # Below command will backup everything inside the project folder
 git add --all .
 

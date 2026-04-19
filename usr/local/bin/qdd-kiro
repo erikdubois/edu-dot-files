@@ -1,7 +1,0 @@
-#!/usr/bin/env bash
-echo '
-[kiro_repo]
-SigLevel = Never
-Server = https://kirodubes.github.io/$repo/$arch
-' | sudo tee --append /etc/pacman.conf
-sudo pacman -Syyu
