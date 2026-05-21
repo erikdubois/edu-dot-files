@@ -63,13 +63,13 @@ Professional system optimization suite for desktop/development environments. Thi
 
 #### Status: **Cleaned & Validated** ✓
 
-| File | Changes | Reason |
-|------|---------|--------|
-| `66-input-optimization.rules` | Removed invalid RUN syntax | `$PPID` substitution unsupported |
-| `67-laptop-optimization.rules` | Fully commented out | Desktop system (not laptop) |
-| `63-usb-optimization.rules` | Removed autosuspend rules | Attributes don't exist on USB devices |
-| `68-sound-power.rules` | Removed autosuspend on audio | Incompatible with sound device model |
-| `60-ioschedulers-tuning.rules` | Removed partition-level rules | read_ahead_kb only on block devices |
+| File                           | Changes                       | Reason                                |
+|--------------------------------|-------------------------------|---------------------------------------|
+| `66-input-optimization.rules`  | Removed invalid RUN syntax    | `$PPID` substitution unsupported      |
+| `67-laptop-optimization.rules` | Fully commented out           | Desktop system (not laptop)           |
+| `63-usb-optimization.rules`    | Removed autosuspend rules     | Attributes don't exist on USB devices |
+| `68-sound-power.rules`         | Removed autosuspend on audio  | Incompatible with sound device model  |
+| `60-ioschedulers-tuning.rules` | Removed partition-level rules | read_ahead_kb only on block devices   |
 
 **Result**: Eliminated 200+ boot-time udev warnings without functional impact.
 
